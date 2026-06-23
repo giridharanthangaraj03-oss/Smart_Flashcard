@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useDeviceType } from '../hooks/useDeviceType';
 
 const navLinkClass = ({ isActive }) =>
-  `rounded-full px-4 py-2 text-sm font-medium transition ${
+  `rounded-full px-3 py-1.5 text-xs font-medium transition ${
     isActive
       ? 'bg-indigo-600 text-white'
       : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
@@ -14,9 +15,24 @@ function Navbar() {
   const { isAuthenticated, logout, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { deviceType } = useDeviceType();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  const menuItems = isAuthenticated
+    ? [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/create', label: 'Create Flashcards' },
+        { to: '/study-plan', label: 'Study Plan' },
+        { to: '/profile', label: 'Profile' },
+      ]
+    : [
+        { to: '/login', label: 'Login' },
+        { to: '/signup', label: 'Signup' },
+      ];
+
+  const closeMenu = () => setIsMenuOpen(false);
   const handleLogout = () => {
+    closeMenu();
     logout();
     navigate('/login');
   };
@@ -35,55 +51,54 @@ function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-expanded={isMenuOpen}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              title={isMenuOpen ? 'Close menu' : 'Open menu'}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-base text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+            >
+              {isMenuOpen ? '✕' : '☰'}
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 z-30 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-800 dark:bg-slate-950">
+                <nav className="flex flex-col gap-2">
+                  {menuItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={navLinkClass}
+                      onClick={closeMenu}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                  {isAuthenticated && (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-600 dark:bg-indigo-600"
+                    >
+                      Logout
+                    </button>
+                  )}
+                </nav>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-lg text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-200"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to light mode'}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-base text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-200"
           >
             {theme === 'dark' ? '☀' : '🌙'}
           </button>
-
-          {isAuthenticated ? (
-            <>
-              <nav className="hidden items-center gap-2 md:flex">
-                <NavLink to="/dashboard" className={navLinkClass}>
-                  Dashboard
-                </NavLink>
-                <NavLink to="/create" className={navLinkClass}>
-                  Create Flashcards
-                </NavLink>
-                <NavLink to="/study-plan" className={navLinkClass}>
-                  Study Plan
-                </NavLink>
-                <NavLink to="/profile" className={navLinkClass}>
-                  Profile
-                </NavLink>
-              </nav>
-              <div className="hidden text-right md:block">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.name}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Device: {deviceType}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600 dark:bg-indigo-600"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <nav className="flex items-center gap-2">
-              <NavLink to="/login" className={navLinkClass}>
-                Login
-              </NavLink>
-              <NavLink to="/signup" className={navLinkClass}>
-                Signup
-              </NavLink>
-            </nav>
-          )}
         </div>
       </div>
     </header>

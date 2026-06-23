@@ -27,10 +27,10 @@ class GenerateResponse(BaseModel):
 async def load_models():
     global _models_loaded
     try:
-        from nlp_service.keyword_extractor import get_nlp
+        from nlp_service.keyword_extractor import preload_keyword_models
         from nlp_service.sentence_ranker import get_model
         from nlp_service.question_generator import get_t5
-        get_nlp()
+        preload_keyword_models()
         get_model()
         get_t5()
         _models_loaded = True

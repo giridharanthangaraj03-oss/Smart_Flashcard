@@ -85,9 +85,10 @@ cd nlp-service
 python -m venv .venv
 .venv\\Scripts\\activate
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 python app.py
 ```
+
+On first run, Hugging Face models (`dslim/bert-base-NER`, `t5-small`, `all-MiniLM-L6-v2`) are downloaded automatically.
 
 If you see a `SentencePiece` error for T5, install it explicitly:
 

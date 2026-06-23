@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   degrees,
@@ -6,6 +7,7 @@ import {
   getCoursesForProfile,
   getInstitutionNamePlaceholder,
   getInstitutionNameStepTitle,
+  getSubCourseCategories,
   institutionTypes,
   schoolStandards,
   studyFrequencies,
@@ -26,6 +28,7 @@ const initialForm = {
   studyGoal: '',
   studyGoalOther: '',
   studyFrequency: '',
+  selectedCourses: [],
   focusSubject: '',
   examDateOption: '',
   examDate: '',
@@ -46,6 +49,7 @@ function StudyOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
   const isEditMode = searchParams.get('edit') === 'true';
+  const { setLang } = useLanguage();
 
   const buildFormFromProfile = (profile) => {
     if (!profile) return initialForm;
@@ -64,6 +68,7 @@ function StudyOnboardingPage() {
       studyGoal: normalizedStudyGoal || '',
       studyGoalOther: normalizedStudyGoal === 'Others' ? profile.studyGoal || '' : '',
       studyFrequency: profile.studyFrequency || '',
+      selectedCourses: profile.selectedCourses || [],
       focusSubject: profile.focusSubject || '',
       examDateOption: profile.examDateOption || '',
       examDate: profile.examDate || '',
@@ -83,6 +88,23 @@ function StudyOnboardingPage() {
 
       if (profile) {
         setForm(buildFormFromProfile(profile));
+        // If profile includes a study language we map it to app language codes
+        const normalized = buildFormFromProfile(profile).studyLanguage;
+        if (normalized) {
+          const map = {
+            English: 'en',
+            French: 'fr',
+            Tamil: 'ta',
+            Hindi: 'hi',
+            Spanish: 'es',
+            Español: 'es',
+            German: 'de',
+            Telugu: 'te',
+            Malayalam: 'ml',
+          };
+          const code = map[normalized] || (normalized === 'Other' ? null : null);
+          if (code) setLang(code);
+        }
       }
 
       setCheckingExisting(false);
@@ -91,11 +113,34 @@ function StudyOnboardingPage() {
     void redirectIfComplete();
   }, [isEditMode, navigate]);
 
+  useEffect(() => {
+    const map = {
+      English: 'en',
+      French: 'fr',
+      Tamil: 'ta',
+      Hindi: 'hi',
+      Spanish: 'es',
+      Español: 'es',
+      German: 'de',
+      Telugu: 'te',
+      Malayalam: 'ml',
+    };
+    if (form.studyLanguage) {
+      const code = map[form.studyLanguage] || null;
+      if (code) setLang(code);
+    }
+  }, [form.studyLanguage, setLang]);
+
   const displayName = form.displayName || user?.name || '';
 
   const courses = useMemo(
     () => getCoursesForProfile(form.institutionType, form.standard, form.degree),
     [form.institutionType, form.standard, form.degree],
+  );
+
+  const subCourseOptions = useMemo(
+    () => getSubCourseCategories(form.selectedCourses),
+    [form.selectedCourses],
   );
 
   const steps = useMemo(() => {
@@ -140,6 +185,11 @@ function StudyOnboardingPage() {
       {
         title: 'Your courses',
         description: 'Pick the course list that matches your study path.',
+        fields: ['selectedCourses'],
+      },
+      {
+        title: 'Sub-course category',
+        description: 'Choose a sub-course category from your selected course(s).',
         fields: ['focusSubject'],
       },
       {
@@ -151,11 +201,6 @@ function StudyOnboardingPage() {
         title: 'How often do you want to study?',
         description: 'Choose a study rhythm that fits your schedule.',
         fields: ['studyFrequency'],
-      },
-      {
-        title: 'Which subject will you focus on first?',
-        description: 'Select the subject you want to start with.',
-        fields: ['focusSubject'],
       },
       {
         title: 'Upcoming exam or study end date',
@@ -175,6 +220,20 @@ function StudyOnboardingPage() {
   const totalSteps = steps.length;
   const currentStep = steps[step];
 
+  const toggleCourseSelection = (course) => {
+    setForm((prev) => {
+      const selectedCourses = prev.selectedCourses.includes(course)
+        ? prev.selectedCourses.filter((item) => item !== course)
+        : [...prev.selectedCourses, course];
+
+      return {
+        ...prev,
+        selectedCourses,
+        focusSubject: '',
+      };
+    });
+  };
+
   const updateField = (name, value) => {
     setForm((prev) => {
       const next = { ...prev, [name]: value };
@@ -182,9 +241,11 @@ function StudyOnboardingPage() {
         next.standard = '';
         next.degree = '';
         next.institutionName = '';
+        next.selectedCourses = [];
         next.focusSubject = '';
       }
       if (name === 'standard' || name === 'degree') {
+        next.selectedCourses = [];
         next.focusSubject = '';
       }
       if (name === 'studyGoal' && value !== 'Others') {
@@ -220,6 +281,10 @@ function StudyOnboardingPage() {
         break;
       case 'Your courses':
         if (!courses.length) return 'Please complete the previous education details first.';
+        if (!form.selectedCourses.length) return 'Please select at least one course.';
+        break;
+      case 'Sub-course category':
+        if (!form.focusSubject) return 'Please select a sub-course category.';
         break;
       case 'What do you want to achieve?':
         if (!form.studyGoal) return 'Please select your study goal.';
@@ -229,9 +294,6 @@ function StudyOnboardingPage() {
         break;
       case 'How often do you want to study?':
         if (!form.studyFrequency) return 'Please select how often you want to study.';
-        break;
-      case 'Which subject will you focus on first?':
-        if (!form.focusSubject) return 'Please select a subject to focus on first.';
         break;
       case 'Upcoming exam or study end date':
         if (!form.examDateOption) return 'Please select an exam timeline.';
@@ -374,15 +436,48 @@ function StudyOnboardingPage() {
 
       case 'Your courses':
         return (
-          <div className="flex flex-wrap gap-2">
-            {courses.map((course) => (
-              <span
-                key={course}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200"
+          <div className="grid gap-3 sm:grid-cols-2">
+            {courses.map((course) => {
+              const isSelected = form.selectedCourses.includes(course);
+              return (
+                <button
+                  key={course}
+                  type="button"
+                  onClick={() => toggleCourseSelection(course)}
+                  className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                      : 'border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  {course}
+                </button>
+              );
+            })}
+          </div>
+        );
+
+      case 'Sub-course category':
+        return (
+          <div className="space-y-3">
+            {subCourseOptions.length === 0 ? (
+              <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                Select your course(s) first to see available sub-course categories.
+              </div>
+            ) : (
+              <select
+                value={form.focusSubject}
+                onChange={(e) => updateField('focusSubject', e.target.value)}
+                className={inputClass}
               >
-                {course}
-              </span>
-            ))}
+                <option value="">Select sub-course category</option>
+                {subCourseOptions.map((subCourse) => (
+                  <option key={subCourse} value={subCourse}>
+                    {subCourse}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         );
 
@@ -435,20 +530,28 @@ function StudyOnboardingPage() {
           </div>
         );
 
-      case 'Which subject will you focus on first?':
+      case 'Sub-course category':
         return (
-          <select
-            value={form.focusSubject}
-            onChange={(e) => updateField('focusSubject', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Select subject</option>
-            {courses.map((course) => (
-              <option key={course} value={course}>
-                {course}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            {subCourseOptions.length === 0 ? (
+              <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                Select your course(s) first to see available sub-course categories.
+              </div>
+            ) : (
+              <select
+                value={form.focusSubject}
+                onChange={(e) => updateField('focusSubject', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Select sub-course category</option>
+                {subCourseOptions.map((subCourse) => (
+                  <option key={subCourse} value={subCourse}>
+                    {subCourse}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         );
 
       case 'Upcoming exam or study end date':

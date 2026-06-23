@@ -71,6 +71,37 @@ export const degreeCourses = {
   Other: ['General Studies', 'Custom Subject'],
 };
 
+export const courseSubCategories = {
+  Mathematics: ['Algebra', 'Geometry', 'Calculus', 'Trigonometry', 'Statistics'],
+  Science: ['General Science', 'Experiments', 'Theory', 'Scientific Method'],
+  English: ['Grammar', 'Reading Comprehension', 'Writing', 'Literature'],
+  'Social Science': ['History', 'Geography', 'Civics', 'Economics'],
+  'Computer Science': ['Programming', 'Data Structures', 'Algorithms', 'Web Development', 'Databases'],
+  Physics: ['Mechanics', 'Optics', 'Thermodynamics', 'Electricity', 'Modern Physics'],
+  Chemistry: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Biochemistry'],
+  Biology: ['Botany', 'Zoology', 'Genetics', 'Human Biology', 'Ecology'],
+  Economics: ['Microeconomics', 'Macroeconomics', 'Finance', 'International Trade'],
+  Accountancy: ['Financial Accounting', 'Cost Accounting', 'Taxation', 'Auditing'],
+  'Information Technology': ['Networking', 'Database Systems', 'Cyber Security', 'Cloud Computing'],
+  Electronics: ['Analog Electronics', 'Digital Electronics', 'Microcontrollers', 'Sensors'],
+  'Mechanical Engineering': ['Thermodynamics', 'Fluid Mechanics', 'Machine Design', 'Manufacturing'],
+  'Civil Engineering': ['Structural Engineering', 'Surveying', 'Construction Materials', 'Geotechnics'],
+  'Business Administration': ['Management', 'Marketing', 'Operations', 'Entrepreneurship'],
+  'Data Science': ['Statistics', 'Machine Learning', 'Data Visualization', 'Data Mining'],
+  'Artificial Intelligence': ['Machine Learning', 'Deep Learning', 'Computer Vision', 'NLP'],
+  'General Studies': ['Study Skills', 'Time Management', 'Exam Preparation'],
+  'Custom Subject': ['Custom Category'],
+};
+
+export const getSubCourseCategories = (selectedCourses) => {
+  const categories = new Set();
+  selectedCourses.forEach((course) => {
+    const options = courseSubCategories[course] || [`${course} basics`, `${course} advanced`];
+    options.forEach((item) => categories.add(item));
+  });
+  return Array.from(categories);
+};
+
 export const studyGoals = [
   'Get better marks',
   'Understand the concept',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthForm from '../components/AuthForm';
+import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
 import { syncAndCheckOnboarding } from '../utils/syncStudyProfile';
 
@@ -11,6 +12,7 @@ function LoginPage() {
   const [values, setValues] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
   const onChange = (event) => {
     setValues((prev) => ({ ...prev, [event.target.name]: event.target.value }));
@@ -37,23 +39,23 @@ function LoginPage() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
       <AuthForm
-        title="Login to your study dashboard"
-        subtitle="Access your generated flashcards, reviews, and progress analytics."
+        title={t('loginTitle')}
+        subtitle={t('loginSubtitle')}
         fields={[
-          { name: 'email', label: 'Email', type: 'email', placeholder: 'student@example.com' },
-          { name: 'password', label: 'Password', type: 'password', placeholder: 'Minimum 8 characters' },
+          { name: 'email', label: t('email'), type: 'email', placeholder: 'student@example.com' },
+          { name: 'password', label: t('password'), type: 'password', placeholder: 'Minimum 8 characters' },
         ]}
         values={values}
         onChange={onChange}
         onSubmit={onSubmit}
-        submitLabel="Login"
+        submitLabel={t('login')}
         error={error}
         loading={loading}
         footer={
           <>
-            Don&apos;t have an account?{' '}
+            {t('createAccountQuestion')}{' '}
             <Link to="/signup" className="font-semibold text-indigo-600 dark:text-indigo-400">
-              Create one
+              {t('createAccountAction')}
             </Link>
           </>
         }

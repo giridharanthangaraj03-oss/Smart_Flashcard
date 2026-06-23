@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import CreateFlashcardsPage from './pages/CreateFlashcardsPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
@@ -15,9 +16,10 @@ import StudyPlanPage from './pages/StudyPlanPage';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
+    <LanguageProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
           <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
             <Navbar />
             <main className="mx-auto min-h-[calc(100vh-72px)] max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -83,7 +85,8 @@ function App() {
           </div>
         </BrowserRouter>
       </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

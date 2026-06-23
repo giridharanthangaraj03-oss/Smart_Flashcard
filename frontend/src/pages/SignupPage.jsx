@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthForm from '../components/AuthForm';
+import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import { getPasswordError, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
@@ -16,6 +17,7 @@ function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
   const passwordRequirements = useMemo(
     () =>
@@ -59,20 +61,20 @@ function SignupPage() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
       <AuthForm
-        title="Create your study account"
-        subtitle="Turn long notes into smart flashcards and review them with spaced repetition."
+        title={t('signupTitle')}
+        subtitle={t('signupSubtitle')}
         fields={[
-          { name: 'name', label: 'Name', type: 'text', placeholder: 'Your full name' },
-          { name: 'email', label: 'Email', type: 'email', placeholder: 'student@example.com' },
+          { name: 'name', label: t('name'), type: 'text', placeholder: 'Your full name' },
+          { name: 'email', label: t('email'), type: 'email', placeholder: 'student@example.com' },
           {
             name: 'password',
-            label: 'Password',
+            label: t('password'),
             type: 'password',
             placeholder: 'Create a strong password',
           },
           {
             name: 'confirmPassword',
-            label: 'Confirm Password',
+            label: t('confirmPassword'),
             type: 'password',
             placeholder: 'Re-enter password',
           },
@@ -80,15 +82,15 @@ function SignupPage() {
         values={values}
         onChange={onChange}
         onSubmit={onSubmit}
-        submitLabel="Create account"
+        submitLabel={t('createAccountSubmit')}
         error={error}
         loading={loading}
         passwordRequirements={passwordRequirements}
         footer={
           <>
-            Already have an account?{' '}
+            {t('alreadyHaveAccountQuestion')}{' '}
             <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400">
-              Login
+              {t('loginAction')}
             </Link>
           </>
         }

@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
+
 function AuthForm({
   title,
   subtitle,
@@ -11,10 +14,14 @@ function AuthForm({
   footer,
   passwordRequirements,
 }) {
+  const { t } = useLanguage();
+  const [showPassword, setShowPassword] = useState({});
+
+  const toggleShow = (name) => setShowPassword((s) => ({ ...s, [name]: !s[name] }));
   return (
     <div className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
       <div className="mb-8">
-        <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-500">Welcome</p>
+        <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-500">{t('welcome')}</p>
         <h2 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white">{title}</h2>
         <p className="mt-2 text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
@@ -35,6 +42,26 @@ function AuthForm({
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-indigo-950"
                 required={field.required !== false}
               />
+            ) : field.type === 'password' ? (
+              <div className="relative">
+                <input
+                  type={showPassword[field.name] ? 'text' : 'password'}
+                  name={field.name}
+                  value={values[field.name]}
+                  onChange={onChange}
+                  placeholder={field.placeholder}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-indigo-950"
+                  required={field.required !== false}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleShow(field.name)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                  aria-label={showPassword[field.name] ? t('hide') : t('show')}
+                >
+                  {showPassword[field.name] ? t('hide') : t('show')}
+                </button>
+              </div>
             ) : (
               <input
                 type={field.type}
@@ -74,7 +101,7 @@ function AuthForm({
           disabled={loading}
           className="w-full rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {loading ? 'Please wait...' : submitLabel}
+          {loading ? t('pleaseWait') : submitLabel}
         </button>
       </form>
 

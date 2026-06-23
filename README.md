@@ -100,6 +100,22 @@ Then restart the NLP service.
 
 The backend expects the NLP service at `http://localhost:8000`.
 
+### Deploy NLP Service on Render
+
+1. Create a **Web Service** with `Root Directory` set to `nlp-service`.
+2. Set **Python Version** to `3.12.8` (or use the included `runtime.txt`).
+3. **Build Command:**
+   ```bash
+   pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+   ```
+4. **Start Command:**
+   ```bash
+   uvicorn app:app --host 0.0.0.0 --port $PORT
+   ```
+5. Do **not** run `python -m spacy download` — spaCy was removed; keywords use Hugging Face `dslim/bert-base-NER`.
+
+You can also deploy from `nlp-service/render.yaml` in the Render dashboard.
+
 ## Environment Variables
 
 ### Frontend

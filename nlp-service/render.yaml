@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: smart-flashcard-nlp
+    runtime: python
+    rootDir: nlp-service
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: HF_HUB_DISABLE_SYMLINKS_WARNING
+        value: "1"

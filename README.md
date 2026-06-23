@@ -102,20 +102,22 @@ The backend expects the NLP service at `http://localhost:8000`.
 
 ### Deploy NLP Service on Render
 
-Render uses **Python 3.14** by default. Use the versions in `requirements.txt` — they install from prebuilt wheels (no Rust/C++ compile step).
+Render free tier has **512 MB RAM**. Use the lightweight deploy files so the service does not load PyTorch / Hugging Face models at startup.
 
 1. Create a **Web Service** with `Root Directory` set to `nlp-service`.
-2. **Build Command:**
+2. Set **Environment Variable** `NLP_LIGHTWEIGHT=1` and `PYTHON_VERSION=3.12.8`.
+3. **Build Command:**
    ```bash
-   pip install --upgrade pip && pip install --no-cache-dir --prefer-binary -r requirements.txt
+   pip install --upgrade pip && pip install --no-cache-dir --prefer-binary -r requirements-render.txt
    ```
-3. **Start Command:**
+4. **Start Command:**
    ```bash
    uvicorn app:app --host 0.0.0.0 --port $PORT
    ```
-4. Do **not** run `python -m spacy download` — spaCy was removed.
 
-If the build still fails on Python 3.14, set **Environment Variable** `PYTHON_VERSION` to `3.12.8` in Render and redeploy.
+Lightweight mode uses TF-IDF keyword extraction, heuristic sentence ranking, and rule-based deep questions (no torch).
+
+For full local ML mode, use `pip install -r requirements.txt` without `NLP_LIGHTWEIGHT`.
 
 You can also deploy from `nlp-service/render.yaml`.
 

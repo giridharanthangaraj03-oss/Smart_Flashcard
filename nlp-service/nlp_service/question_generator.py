@@ -1,5 +1,7 @@
 import re
 
+from .settings import is_lightweight_mode
+
 _model = None
 _tokenizer = None
 _t5_available = None
@@ -83,6 +85,10 @@ def _is_deep_question(question: str) -> bool:
 
 def _check_t5_available():
     global _t5_available
+    if is_lightweight_mode():
+        _t5_available = False
+        return False
+
     if _t5_available is not None:
         return _t5_available
 

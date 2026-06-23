@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from nlp_service.pipeline import generate_flashcards_from_input
+from nlp_service.settings import is_lightweight_mode
 
 app = FastAPI(title="Smart Flashcard NLP Service", version="1.0.0")
 
@@ -26,17 +27,24 @@ class GenerateResponse(BaseModel):
 @app.on_event("startup")
 async def load_models():
     global _models_loaded
+
+    if is_lightweight_mode():
+        _models_loaded = True
+        print("NLP service started in lightweight mode (TF-IDF + rule-based generation)")
+        return
+
     try:
         from nlp_service.keyword_extractor import preload_keyword_models
         from nlp_service.sentence_ranker import get_model
         from nlp_service.question_generator import get_t5
+
         preload_keyword_models()
         get_model()
         get_t5()
         _models_loaded = True
         print("All NLP models loaded successfully")
-    except Exception as e:
-        print(f"Warning: Model loading issue: {e}")
+    except Exception as error:
+        print(f"Warning: Model loading issue: {error}")
         _models_loaded = False
 
 
@@ -45,6 +53,7 @@ async def health():
     return {
         "status": "healthy" if _models_loaded else "degraded",
         "models_loaded": _models_loaded,
+        "mode": "lightweight" if is_lightweight_mode() else "full",
     }
 
 
@@ -71,10 +80,11 @@ async def generate(request: GenerateRequest):
         return GenerateResponse(flashcards=cards, count=len(cards))
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"NLP processing error: {str(e)}")
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"NLP processing error: {str(error)}")
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

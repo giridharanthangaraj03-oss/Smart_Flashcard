@@ -4,8 +4,12 @@ services:
     runtime: python
     rootDir: nlp-service
     plan: free
-    buildCommand: pip install --upgrade pip && pip install --no-cache-dir --prefer-binary -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir --prefer-binary -r requirements-render.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: NLP_LIGHTWEIGHT
+        value: "1"
       - key: HF_HUB_DISABLE_SYMLINKS_WARNING
         value: "1"

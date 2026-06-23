@@ -3,6 +3,8 @@ from collections import Counter
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from .settings import is_lightweight_mode
+
 _ner_pipeline = None
 
 NER_MODEL = 'dslim/bert-base-NER'
@@ -17,6 +19,9 @@ STOP_WORDS = {
 
 def get_ner_pipeline():
     """Load Hugging Face NER pipeline for keyword extraction."""
+    if is_lightweight_mode():
+        return None
+
     global _ner_pipeline
     if _ner_pipeline is None:
         from transformers import pipeline
@@ -31,6 +36,8 @@ def get_ner_pipeline():
 
 def preload_keyword_models():
     """Warm up Hugging Face keyword models during service startup."""
+    if is_lightweight_mode():
+        return
     get_ner_pipeline()
 
 
@@ -40,8 +47,14 @@ def get_nlp():
 
 
 def _extract_ner_keywords(text: str) -> set[str]:
+    if is_lightweight_mode():
+        return set()
+
     keywords = set()
     ner = get_ner_pipeline()
+    if ner is None:
+        return keywords
+
     max_chars = 10000
     chunk_size = 2000
 
@@ -85,7 +98,7 @@ def _extract_phrase_keywords(text: str) -> set[str]:
 
 
 def extract_keywords(text: str, sentences: list[str]) -> list[str]:
-    """Step 2: Extract keywords using Hugging Face NER, TF-IDF, and phrase heuristics."""
+    """Extract keywords using HF NER when available, otherwise TF-IDF and phrase heuristics."""
     keywords = set()
 
     try:

@@ -102,20 +102,22 @@ The backend expects the NLP service at `http://localhost:8000`.
 
 ### Deploy NLP Service on Render
 
-Render uses its default **Python 3** runtime (currently 3.14). Dependencies in `requirements.txt` are pinned for that environment.
+Render uses **Python 3.14** by default. Use the versions in `requirements.txt` — they install from prebuilt wheels (no Rust/C++ compile step).
 
 1. Create a **Web Service** with `Root Directory` set to `nlp-service`.
 2. **Build Command:**
    ```bash
-   pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+   pip install --upgrade pip && pip install --no-cache-dir --prefer-binary -r requirements.txt
    ```
 3. **Start Command:**
    ```bash
    uvicorn app:app --host 0.0.0.0 --port $PORT
    ```
-4. Do **not** run `python -m spacy download` — spaCy was removed; keywords use Hugging Face `dslim/bert-base-NER`.
+4. Do **not** run `python -m spacy download` — spaCy was removed.
 
-You can also deploy from `nlp-service/render.yaml` in the Render dashboard.
+If the build still fails on Python 3.14, set **Environment Variable** `PYTHON_VERSION` to `3.12.8` in Render and redeploy.
+
+You can also deploy from `nlp-service/render.yaml`.
 
 ## Environment Variables
 

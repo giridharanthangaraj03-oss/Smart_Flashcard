@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 const navLinkClass = ({ isActive }) =>
   `rounded-full px-4 py-2 text-sm font-medium transition ${
@@ -12,6 +13,7 @@ const navLinkClass = ({ isActive }) =>
 function Navbar() {
   const { isAuthenticated, logout, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { deviceType } = useDeviceType();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -62,6 +64,7 @@ function Navbar() {
               <div className="hidden text-right md:block">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.name}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Device: {deviceType}</p>
               </div>
               <button
                 type="button"

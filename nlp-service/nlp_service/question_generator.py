@@ -16,6 +16,11 @@ PROCESS_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+ACTION_PATTERN = re.compile(
+    r'^(?P<subject>.+?)\s+(?P<verb>absorbs|absorb|produces|produce|releases|release|converts|convert|forms|form|creates|create|stores|store|uses|use|helps|help|contains|contain)\s+(?P<object>.+)$',
+    re.IGNORECASE,
+)
+
 PASSIVE_PATTERN = re.compile(
     r'^(?P<subject>.+?)\s+is\s+(?P<action>released|produced|formed|created|generated|stored|used)\s+(?P<detail>.+)$',
     re.IGNORECASE,
@@ -192,6 +197,54 @@ def _build_process_pair(sentence: str, keywords: list[str]) -> tuple[str, str] |
     return question, answer
 
 
+def _to_base_verb(verb: str) -> str:
+    base_forms = {
+        'absorbs': 'absorb',
+        'produces': 'produce',
+        'releases': 'release',
+        'converts': 'convert',
+        'creates': 'create',
+        'stores': 'store',
+        'uses': 'use',
+        'helps': 'help',
+        'contains': 'contain',
+        'has': 'have',
+        'does': 'do',
+        'is': 'be',
+        'was': 'be',
+        'were': 'be',
+    }
+    verb_lower = verb.lower()
+    if verb_lower in base_forms:
+        return base_forms[verb_lower]
+    if verb_lower.endswith('ies'):
+        return verb_lower[:-3] + 'y'
+    if verb_lower.endswith('es'):
+        return verb_lower[:-2]
+    if verb_lower.endswith('s') and len(verb_lower) > 3:
+        return verb_lower[:-1]
+    return verb_lower
+
+
+def _build_action_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
+    match = ACTION_PATTERN.match(_clean_sentence(sentence))
+    if not match:
+        return None
+
+    subject = match.group('subject').strip(' "\'')
+    verb = match.group('verb').strip()
+    obj = match.group('object').strip()
+    if len(subject) < 2 or len(obj) < 3:
+        return None
+
+    base_verb = _to_base_verb(verb)
+    question = f"What does {subject} {base_verb}?"
+    answer = _capitalize_answer(f"{subject} {verb} {obj.rstrip('.')}." )
+    if not answer.endswith('.'):
+        answer += '.'
+    return question, answer
+
+
 def _extract_comparison_terms(sentence: str) -> tuple[str, str] | None:
     clean = _clean_sentence(sentence)
     lower = clean.lower()
@@ -295,7 +348,7 @@ def _is_valid_pair(question: str, answer: str) -> bool:
         return False
 
     normalized_question = _normalize(question)
-    if normalized_question.startswith(('what is', 'how does', 'what are', 'why is', 'why does')):
+    if normalized_question.startswith(('what is', 'how does', 'what are', 'what does', 'why is', 'why does')):
         return len(normalized_question) >= 8
 
     if len(question) < 20 or not _is_deep_question(question):
@@ -345,6 +398,7 @@ def build_flashcard_pair(sentence: str, keywords: list[str]) -> tuple[str, str] 
     builders = (
         _build_comparison_pair,
         _build_process_pair,
+        _build_action_pair,
         _build_definition_pair,
     )
 

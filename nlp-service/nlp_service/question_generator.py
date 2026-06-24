@@ -168,14 +168,7 @@ def _build_definition_pair(sentence: str, keywords: list[str]) -> tuple[str, str
     if len(subject) < 3 or len(definition) < 10:
         return None
 
-    if re.match(r'^(released|produced|formed|created|generated|stored|used|converted|absorbed)\b', definition, re.I):
-        return None
-
-    concept = subject.lower()
-    question = (
-        f"Beyond memorizing a definition, explain the conceptual foundation of {concept} — "
-        f"what principles does it rest on, and how does it connect to related ideas in this topic?"
-    )
+    question = f"What is {subject.strip()}?"
     answer = _capitalize_answer(definition)
     if not answer.endswith('.'):
         answer += '.'
@@ -192,149 +185,50 @@ def _build_process_pair(sentence: str, keywords: list[str]) -> tuple[str, str] |
     if len(process) < 3 or len(detail) < 10:
         return None
 
-    question = (
-        f"Deconstruct the mechanism of {process.lower()} at a conceptual level — "
-        f"what drives each stage, why must the sequence occur in this order, and what would break down if a step failed?"
-    )
-    answer = _capitalize_answer(f"It is the process by which {detail.rstrip('.')}.")
-    return question, answer
-
-
-def _build_passive_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    match = PASSIVE_PATTERN.match(_clean_sentence(sentence))
-    if not match:
-        return None
-
-    subject = match.group('subject').strip(' "\'')
-    action = match.group('action').lower()
-    detail = match.group('detail').strip().rstrip('.')
-
-    question = (
-        f"Analyze why {subject.lower()} must be {action} within this system — "
-        f"what conceptual dependencies make this necessary, and what broader consequences follow?"
-    )
-    answer = _capitalize_answer(f"{subject} is {action} {detail}.")
-    return question, answer
-
-
-def _build_action_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    lower = sentence_clean.lower()
-    if not any(verb in lower for verb in ACTION_VERBS):
-        return None
-
-    subject = _extract_subject(sentence_clean)
-    if not subject:
-        return None
-
-    question = (
-        f"Examine the functional role of {subject.lower()} in this process — "
-        f"how does it interact with other components, and why is its contribution conceptually significant?"
-    )
-    answer = _capitalize_answer(sentence_clean)
+    question = f"How does {process.strip()} work?"
+    answer = _capitalize_answer(f"{process.strip()} is the process by which {detail.rstrip('.')}.")
     if not answer.endswith('.'):
         answer += '.'
     return question, answer
 
 
-def _build_mechanism_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    lower = sentence_clean.lower()
-    if not any(marker in lower for marker in MECHANISM_MARKERS):
+def _extract_comparison_terms(sentence: str) -> tuple[str, str] | None:
+    clean = _clean_sentence(sentence)
+    lower = clean.lower()
+
+    if ' versus ' in lower:
+        parts = re.split(r'\s+versus\s+', clean, maxsplit=1)
+    elif ' compared to ' in lower:
+        parts = re.split(r'\s+compared to\s+', clean, maxsplit=1)
+    elif ' unlike ' in lower:
+        parts = re.split(r'\s+unlike\s+', clean, maxsplit=1)
+    elif ' whereas ' in lower:
+        parts = re.split(r'\s+whereas\s+', clean, maxsplit=1)
+    else:
+        parts = re.split(r'\s+and\s+|\s+or\s+', clean, maxsplit=1)
+
+    if len(parts) != 2:
         return None
 
-    concept = _extract_core_concept(sentence_clean, keywords)
-    question = (
-        f"Trace the conceptual mechanism linking the ideas in this statement about {concept} — "
-        f"what sequence of reasoning explains how the outcome is produced?"
-    )
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
-    return question, answer
-
-
-def _build_keyword_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    concept = _extract_core_concept(sentence_clean, keywords)
-
-    question = (
-        f"Examine the conceptual significance of {concept} in depth — "
-        f"what underlying principles does it embody, and how does it shape understanding of this topic?"
-    )
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
-    if _is_valid_pair(question, answer):
-        return question, answer
-
-    return None
-
-
-def _build_causal_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    lower = sentence_clean.lower()
-    if not any(marker in lower for marker in CAUSAL_MARKERS):
+    left = parts[0].strip(' .,')
+    right = parts[1].strip(' .,')
+    if len(left.split()) < 1 or len(right.split()) < 1:
         return None
 
-    concept = _extract_core_concept(sentence_clean, keywords)
-    question = (
-        f"Analyze the causal chain involving {concept} — "
-        f"what reasoning connects each step, and how would altering one factor change the conceptual outcome?"
-    )
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
-    return question, answer
+    return left, right
 
 
 def _build_comparison_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
     sentence_clean = _clean_sentence(sentence)
-    lower = sentence_clean.lower()
-    if not any(marker in lower for marker in COMPARISON_MARKERS):
+    if not any(marker in sentence_clean.lower() for marker in COMPARISON_MARKERS):
         return None
 
-    question = (
-        "Compare and contrast the competing ideas in this statement at a conceptual level — "
-        "what deeper insight emerges from their differences, and why does that distinction matter?"
-    )
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
-    return question, answer
-
-
-def _build_application_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    lower = sentence_clean.lower()
-    if len(sentence_clean.split()) < 10:
+    terms = _extract_comparison_terms(sentence_clean)
+    if not terms:
         return None
 
-    application_triggers = ('example', 'application', 'used in', 'applied', 'real-world', 'practical')
-    if not any(trigger in lower for trigger in application_triggers):
-        return None
-
-    concept = _extract_core_concept(sentence_clean, keywords)
-    question = (
-        f"How would you transfer the conceptual understanding of {concept} to a novel, complex scenario — "
-        f"what reasoning steps would you apply, and what pitfalls must you anticipate?"
-    )
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
-    return question, answer
-
-
-def _build_synthesis_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    sentence_clean = _clean_sentence(sentence)
-    if len(sentence_clean.split()) < 8:
-        return None
-
-    concept = _extract_core_concept(sentence_clean, keywords)
-    question = (
-        f"Synthesize the ideas in this statement about {concept} — "
-        f"how do the underlying principles interlock, and what broader theoretical framework do they support?"
-    )
+    left, right = terms
+    question = f"What are the differences between {left} and {right}?"
     answer = _capitalize_answer(sentence_clean)
     if not answer.endswith('.'):
         answer += '.'
@@ -344,10 +238,31 @@ def _build_synthesis_pair(sentence: str, keywords: list[str]) -> tuple[str, str]
 def _fallback_question(sentence: str, keywords: list[str]) -> str:
     sentence_clean = _clean_sentence(sentence)
     concept = _extract_core_concept(sentence_clean, keywords)
-    return (
-        f"Develop a deep conceptual explanation of {concept} — "
-        f"what core principles are at work, how do they interrelate, and why does this matter beyond surface recall?"
-    )
+    return f"What is the key concept described by {concept}?"
+
+
+def _is_valid_pair(question: str, answer: str) -> bool:
+    if len(answer) < 10:
+        return False
+
+    normalized_question = _normalize(question)
+    if normalized_question.startswith(('what is', 'how does', 'what are', 'why is', 'why does')):
+        return len(normalized_question) >= 8
+
+    if len(question) < 20 or not _is_deep_question(question):
+        return False
+
+    if _normalize(question) == _normalize(answer):
+        return False
+
+    question_words = set(re.findall(r'\b[a-z]{3,}\b', _normalize(question)))
+    answer_words = set(re.findall(r'\b[a-z]{3,}\b', _normalize(answer)))
+    if question_words and answer_words:
+        overlap = len(question_words & answer_words) / max(len(question_words), 1)
+        if overlap > 0.85 and len(answer_words) <= len(question_words) + 2:
+            return False
+
+    return True
 
 
 def _generate_t5_question(sentence: str) -> str | None:

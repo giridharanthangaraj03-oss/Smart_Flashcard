@@ -1,12 +1,50 @@
 import re
 
 
+HEADING_PATTERNS = (
+    re.compile(r'^(chapter|section|unit|part|module)\b', re.I),
+    re.compile(r'^(table of contents|contents|index|references|bibliography|appendix)\b', re.I),
+    re.compile(r'^[A-Z0-9][A-Z0-9\s\-\&,:;\'\"\.\(\)]+$'),
+)
+
+TOC_LINE_PATTERN = re.compile(r'\.{3,}|\s+\d+$')
+PAGE_NUMBER_PATTERN = re.compile(r'^(page|p)\s*\d+(?:\s*/\s*\d+)?$', re.I)
+
+
+def _looks_like_heading(line: str) -> bool:
+    if len(line.split()) <= 1:
+        return True
+    if PAGE_NUMBER_PATTERN.match(line):
+        return True
+    if any(pattern.match(line) for pattern in HEADING_PATTERNS):
+        return True
+    if TOC_LINE_PATTERN.search(line) and len(line) < 80:
+        return True
+    if line.isupper() and len(line.split()) <= 10:
+        return True
+    if len(line.split()) <= 6 and line[0].isupper() and not line.endswith(('.', '?', '!')):
+        return True
+    return False
+
+
 def clean_text(text: str) -> str:
     """Step 1: Clean and normalize text."""
-    text = text.strip()
-    text = re.sub(r'\s+', ' ', text)
-    text = re.sub(r'[^\w\s.,;:!?\'\"()-]', '', text)
-    return text
+    text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
+    lines = []
+    for raw_line in text.split('\n'):
+        line = raw_line.strip()
+        if not line:
+            continue
+        if _looks_like_heading(line):
+            continue
+        line = re.sub(r'\[\d+\]', '', line)
+        line = re.sub(r'\(\s*\d{4}\s*\)', '', line)
+        line = re.sub(r'\s+', ' ', line)
+        lines.append(line)
+
+    cleaned = ' '.join(lines)
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    return cleaned.strip()
 
 
 def split_sentences(text: str) -> list[str]:

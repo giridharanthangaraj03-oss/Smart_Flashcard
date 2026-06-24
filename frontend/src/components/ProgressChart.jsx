@@ -2,6 +2,7 @@ import {
   ArcElement,
   CategoryScale,
   Chart as ChartJS,
+  Filler,
   Legend,
   LinearScale,
   LineElement,
@@ -18,6 +19,7 @@ ChartJS.register(
   LineElement,
   Tooltip,
   Legend,
+  Filler,
 );
 
 function ProgressChart({ stats, history = [] }) {

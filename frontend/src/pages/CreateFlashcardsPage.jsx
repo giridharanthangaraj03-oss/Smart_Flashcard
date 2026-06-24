@@ -334,21 +334,19 @@ function CreateFlashcardsPage() {
             <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Number of Flashcards
             </span>
-            <input
-              type="number"
-              min={1}
-              max={15}
+            <select
               value={maxCards}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                if (Number.isNaN(value)) return;
-                setMaxCards(Math.min(15, Math.max(1, value)));
-              }}
+              onChange={(event) => setMaxCards(Number(event.target.value))}
               className={inputClass}
-              required
-            />
+            >
+              {[1, 3, 5, 7, 9, 11, 13, 15].map((count) => (
+                <option key={count} value={count}>
+                  {count} card{count > 1 ? 's' : ''}
+                </option>
+              ))}
+            </select>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Enter how many questions you want generated (1 to 15).
+              Choose how many cards to generate from your notes.
             </p>
           </label>
 

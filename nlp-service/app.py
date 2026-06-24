@@ -141,7 +141,7 @@ async def load_models():
         _models_loaded = False
         _last_error = str(error)
         logger.exception("Model loading failed")
-        raise
+        logger.warning("Falling back to lightweight mode due to model loading failure")
 
 
 @app.on_event("shutdown")

@@ -10,3 +10,5 @@ protobuf==5.29.2
 pydantic==2.13.4
 typing-extensions>=4.14.1
 huggingface-hub>=0.27.0
+spacy>=3.7.2
+python-dotenv>=1.0.0

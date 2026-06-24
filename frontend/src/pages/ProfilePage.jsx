@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getFlashcardSets } from '../services/flashcardService';
+import api from '../services/api';
 
 function ProfilePage() {
   const { user } = useAuth();
   const [reviewSummary, setReviewSummary] = useState({ totalSets: 0, totalCards: 0, totalReviews: 0 });
+  const [serviceHealth, setServiceHealth] = useState({ status: 'unknown', nlp: 'unknown', database: 'unknown', metrics: null });
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -24,6 +26,27 @@ function ProfilePage() {
       }
     };
     loadSummary();
+  }, []);
+
+  useEffect(() => {
+    const loadServiceHealth = async () => {
+      try {
+        const response = await api.get('/api/health');
+        const data = response.data;
+        setServiceHealth({
+          status: data.status === 'ok' ? 'healthy' : 'unhealthy',
+          nlp: data.nlp?.status || 'unknown',
+          database: data.database?.status || 'unknown',
+          metrics: data,
+        });
+      } catch {
+        setServiceHealth({ status: 'offline', nlp: 'offline', database: 'offline', metrics: null });
+      }
+    };
+    loadServiceHealth();
+    // Refresh health status every 30 seconds
+    const interval = setInterval(loadServiceHealth, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -61,6 +84,39 @@ function ProfilePage() {
             <p className="text-sm text-emerald-600 dark:text-emerald-300">Reviews</p>
             <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{reviewSummary.totalReviews}</p>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Service Health</h3>
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+            <div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Overall Status</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-white capitalize">{serviceHealth.status}</p>
+            </div>
+            <div className={`h-4 w-4 rounded-full ${serviceHealth.status === 'healthy' ? 'bg-emerald-500' : serviceHealth.status === 'unhealthy' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+            <div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">NLP Service</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-white capitalize">{serviceHealth.nlp}</p>
+            </div>
+            <div className={`h-4 w-4 rounded-full ${serviceHealth.nlp === 'ok' ? 'bg-emerald-500' : serviceHealth.nlp === 'degraded' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+            <div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Database</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-white capitalize">{serviceHealth.database}</p>
+            </div>
+            <div className={`h-4 w-4 rounded-full ${serviceHealth.database === 'ok' ? 'bg-emerald-500' : serviceHealth.database === 'degraded' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+          </div>
+          {serviceHealth.metrics?.nlp?.memory_mb && (
+            <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+              <p className="text-sm text-slate-500 dark:text-slate-400">NLP Service Memory</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-white">{serviceHealth.metrics.nlp.memory_mb.toFixed(1)} MB</p>
+            </div>
+          )}
         </div>
       </section>
     </div>

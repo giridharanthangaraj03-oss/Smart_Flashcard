@@ -330,3 +330,62 @@ def extract_answer(sentence: str, keywords: list[str]) -> str:
     sentence_clean = _clean_sentence(sentence)
     answer = _capitalize_answer(sentence_clean)
     return answer if answer.endswith('.') else f"{answer}."
+
+
+def generate_answer_from_question(question: str, context_sentence: str = "") -> str:
+    """Analyze a question and generate an appropriate answer.
+    
+    Args:
+        question: The question to analyze (e.g., "What is photosynthesis?")
+        context_sentence: Optional original sentence for better answer extraction
+    
+    Returns:
+        A generated or inferred answer based on question analysis
+    """
+    question_clean = _clean_sentence(question)
+    question_lower = question_clean.lower()
+    
+    # Pattern: "What is X?" or "What are X?"
+    what_is_match = re.match(r'^what (?:is|are) (.+)\?$', question_lower)
+    if what_is_match:
+        subject = what_is_match.group(1).strip()
+        if context_sentence:
+            # Try to extract definition from context
+            def_match = DEFINITION_PATTERN.match(_clean_sentence(context_sentence))
+            if def_match:
+                definition = def_match.group('definition').strip()
+                return _capitalize_answer(definition) + ("." if not definition.endswith('.') else "")
+        # Generate generic answer from question
+        return f"{_capitalize_answer(subject)} is a fundamental concept that involves..."
+    
+    # Pattern: "How does X work?" or "How does X...?"
+    how_does_match = re.match(r'^how does (.+)\?$', question_lower)
+    if how_does_match:
+        process = how_does_match.group(1).strip()
+        if context_sentence:
+            proc_match = PROCESS_PATTERN.match(_clean_sentence(context_sentence))
+            if proc_match:
+                detail = proc_match.group('detail').strip()
+                answer = f"{_capitalize_answer(process)} works by {detail.rstrip('.')}."
+                return answer
+        # Generate generic answer from question
+        return f"{_capitalize_answer(process)} works through a systematic process that..."
+    
+    # Pattern: "What are the differences between X and Y?"
+    diff_match = re.match(r'^what are the differences between (.+) and (.+)\?$', question_lower)
+    if diff_match:
+        left = diff_match.group(1).strip()
+        right = diff_match.group(2).strip()
+        if context_sentence:
+            sentence_clean = _clean_sentence(context_sentence)
+            if any(marker in sentence_clean.lower() for marker in COMPARISON_MARKERS):
+                return _capitalize_answer(sentence_clean) + ("." if not sentence_clean.endswith('.') else "")
+        # Generate generic comparison answer
+        return f"{_capitalize_answer(left)} and {right} differ in key aspects including their characteristics, functions, and applications."
+    
+    # Fallback: return context sentence if available, otherwise generate placeholder
+    if context_sentence:
+        sentence_clean = _clean_sentence(context_sentence)
+        return _capitalize_answer(sentence_clean) + ("." if not sentence_clean.endswith('.') else "")
+    
+    return "This concept involves a detailed explanation and understanding of the key principles involved."

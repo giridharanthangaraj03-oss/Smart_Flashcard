@@ -1,3 +1,4 @@
+import random
 import re
 
 from .settings import is_lightweight_mode
@@ -46,23 +47,219 @@ DEEP_QUESTION_MARKERS = (
     'integrate', 'interpret', 'assess', 'examine', 'deconstruct',
 )
 
+PRONOUN_SUBJECTS = {'it', 'this', 'these', 'those', 'they', 'them', 'he', 'she', 'we', 'you', 'i', 'there'}
+
+QUESTION_TEMPLATES = {
+    'definition': [
+        'What is {concept}?',
+        'Define {concept}.',
+        'Explain {concept}.',
+        'Describe {concept}.',
+        'What does {term} mean?',
+        'State the definition of {term}.',
+    ],
+    'function': [
+        'What does {concept} do?',
+        'What is the function of {concept}?',
+        'How does {concept} operate?',
+        'How is {concept} used in practice?',
+        'What role does {concept} play?',
+        'How does {concept} perform its task?',
+        'What does {concept} help accomplish?',
+        'How does {concept} contribute to a system?',
+        'What is the primary function of {concept}?',
+        'How does {concept} work in context?',
+        'What is the job of {concept}?',
+        'In what way does {concept} function?',
+        'What does {concept} enable?',
+    ],
+    'purpose': [
+        'What is the purpose of {concept}?',
+        'Why is {concept} important?',
+        'Why is {concept} used?',
+        'When should {concept} be used?',
+        'Where is {concept} applied?',
+        'What are the applications of {concept}?',
+        'Where is {concept} used in real life?',
+        'Give practical uses of {concept}.',
+        'Why would someone choose {concept}?',
+        'What makes {concept} useful?',
+    ],
+    'features': [
+        'What are the features of {concept}?',
+        'What are the characteristics of {concept}?',
+        'What are the components of {concept}?',
+        'What are the elements of {concept}?',
+        'What are the parts of {concept}?',
+        'Explain the architecture of {concept}.',
+        'Describe the structure of {concept}.',
+        'What modules make up {concept}?',
+        'Explain the layers of {concept}.',
+        'What is contained in {concept}?',
+        'What are the building blocks of {concept}?',
+        'Describe the internal structure of {concept}.',
+    ],
+    'advantages': [
+        'What are the advantages of {concept}?',
+        'What are the disadvantages of {concept}?',
+        'List the benefits of {concept}.',
+        'List the limitations of {concept}.',
+        'What problems does {concept} solve?',
+        'What is the significance of {concept}?',
+        'Explain the relevance of {concept}.',
+        'Why is {concept} valuable?',
+    ],
+    'examples': [
+        'Give examples of {concept}.',
+        'What is an example of {concept}?',
+        'Describe use cases of {concept}.',
+        'What are common uses of {concept}?',
+        'How is {concept} applied?',
+        'Explain real-world applications of {concept}.',
+        'What is one practical use for {concept}?',
+    ],
+    'comparison': [
+        'Differentiate between {conceptA} and {conceptB}.',
+        'Compare {conceptA} and {conceptB}.',
+        'How is {conceptA} different from {conceptB}?',
+        'What are the similarities between {conceptA} and {conceptB}?',
+        'Which is better: {conceptA} or {conceptB}?',
+        'Explain the relationship between {conceptA} and {conceptB}.',
+        'Distinguish {conceptA} from {conceptB}.',
+    ],
+    'process': [
+        'Explain the working of {concept}.',
+        'How does {concept} work?',
+        'Describe the process of {concept}.',
+        'What are the steps involved in {concept}?',
+        'Explain the workflow of {concept}.',
+        'How is {concept} implemented?',
+        'What happens during {concept}?',
+        'Describe the execution of {concept}.',
+        'Explain the operation of {concept}.',
+        'Outline the process of {concept}.',
+    ],
+    'history': [
+        'Who developed {concept}?',
+        'Who invented {concept}?',
+        'When was {concept} introduced?',
+        'What is the history of {concept}?',
+        'What led to the development of {concept}?',
+        'Why was {concept} created?',
+        'What problem inspired {concept}?',
+        'Describe the evolution of {concept}.',
+        'What are the origins of {concept}?',
+        'Explain the background of {concept}.',
+    ],
+    'formula': [
+        'What is the formula for {concept}?',
+        'State the equation of {concept}.',
+        'Explain the formula of {concept}.',
+        'What variables are used in {formula}?',
+        'How is {formula} calculated?',
+        'Describe the mathematical expression of {concept}.',
+        'Explain the derivation of {formula}.',
+        'What is the significance of {formula}?',
+        'Apply {formula} to solve a problem.',
+        'What does the formula represent?',
+    ],
+    'summary': [
+        'What are the key points of {concept}?',
+        'Summarize {concept}.',
+        'What should be remembered about {concept}?',
+        'What is the main idea of {concept}?',
+        'State the core concept of {concept}.',
+        'What is the central principle of {concept}?',
+        'Explain the most important aspect of {concept}.',
+        'What is the takeaway from {concept}?',
+        'What is the essence of {concept}?',
+        'What is the fundamental concept behind {concept}?',
+    ],
+}
+
+USE_QUESTION_PATTERN = re.compile(
+    r'^(?P<subject>[A-Za-z0-9\- ]+?)\s+(?:and|&)\s+(?P=subject)\s+(?:use|uses|using|used)\b',
+    re.IGNORECASE,
+)
+
+
+def _format_template(template: str, context: dict[str, str]) -> str:
+    try:
+        return template.format(**context)
+    except KeyError:
+        return template
+
+
+def _template_options(theme: str, context: dict[str, str], used_templates: set[str] | None = None) -> list[tuple[str, str]]:
+    candidates = QUESTION_TEMPLATES.get(theme, [])
+    if not candidates:
+        return []
+
+    if used_templates is None:
+        return [(candidates[0], _format_template(candidates[0], context))]
+
+    unused = [template for template in candidates if template not in used_templates]
+    if not unused:
+        unused = candidates.copy()
+
+    random.shuffle(unused)
+    return [(template, _format_template(template, context)) for template in unused]
+
+
+def _choose_template(theme: str, context: dict[str, str], used_templates: set[str] | None = None) -> str:
+    options = _template_options(theme, context, used_templates)
+    return options[0][1] if options else ''
+
+
+def _infer_question_theme(sentence: str) -> str:
+    text = sentence.lower()
+    if re.search(r'\b(absorb|produce|release|convert|store|use|help|contain|perform|operate|function|role|process|purpose|purpose of)\b', text):
+        return 'function'
+    if re.search(r'\b(formula|equation|calculate|derivation|variable|solve)\b', text):
+        return 'formula'
+    if re.search(r'\b(developed|invented|introduced|history|origin|evolution|background|created|originated)\b', text):
+        return 'history'
+    if re.search(r'\b(example|examples|use case|applications|applied|industries|real life|practical)\b', text):
+        return 'examples'
+    if re.search(r'\b(features|characteristics|components|elements|parts|architecture|structure|modules|layers|building blocks|internal structure)\b', text):
+        return 'features'
+    if re.search(r'\b(advantages|disadvantages|benefits|limitations|problems|solves|important|valuable|purpose|used|use|application|relevance|significance)\b', text):
+        return 'advantages'
+    if re.search(r'\b(how does|working|process|steps|workflow|operation|implement|happens|execution|describe|operation of)\b', text):
+        return 'process'
+    if re.search(r'\b(compare|differences|similarities|relationship|better|distinguish|vs\.?|versus)\b', text):
+        return 'comparison'
+    return 'definition'
+
 ACTION_VERBS = (
     'absorbs', 'absorb', 'produces', 'produce', 'releases', 'release',
     'converts', 'convert', 'forms', 'form', 'creates', 'create',
     'stores', 'store', 'uses', 'use', 'helps', 'help', 'contains', 'contain',
 )
+LINKING_VERBS = {
+    'is', 'are', 'was', 'were', 'be', 'being', 'been',
+    'has', 'have', 'had', 'does', 'do', 'did',
+    'will', 'would', 'can', 'could', 'should', 'may', 'might', 'must',
+}
 
 CAUSAL_MARKERS = ('because', 'therefore', 'thus', 'hence', 'as a result', 'consequently', 'leads to', 'results in')
 COMPARISON_MARKERS = ('whereas', 'however', 'unlike', 'compared to', 'in contrast', 'while', 'although')
 MECHANISM_MARKERS = ('through', 'via', 'by means of', 'mechanism', 'pathway', 'cycle', 'phase', 'step', 'stage')
 
 
+def _remove_repeated_words(text: str) -> str:
+    return re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', text, flags=re.IGNORECASE)
+
+
 def _normalize(text: str) -> str:
-    return re.sub(r'\s+', ' ', text.strip().lower().rstrip('.'))
+    cleaned = re.sub(r'\s+', ' ', text.strip().lower().rstrip('.'))
+    return _remove_repeated_words(cleaned)
 
 
 def _clean_sentence(sentence: str) -> str:
-    return sentence.strip().rstrip('.')
+    cleaned = sentence.strip().rstrip('.')
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    return _remove_repeated_words(cleaned)
 
 
 def _capitalize_answer(answer: str) -> str:
@@ -134,7 +331,7 @@ def _extract_subject(sentence: str) -> str | None:
         clean_word = re.sub(r'[^\w-]', '', word)
         if not clean_word:
             continue
-        if clean_word.lower() in ACTION_VERBS:
+        if clean_word.lower() in ACTION_VERBS or clean_word.lower() in LINKING_VERBS:
             break
         subject_words.append(clean_word)
 
@@ -142,8 +339,27 @@ def _extract_subject(sentence: str) -> str | None:
         return None
 
     subject = ' '.join(subject_words).strip(' "\'')
+    if subject.lower() in PRONOUN_SUBJECTS:
+        return None
     return subject if len(subject) > 2 else None
 
+def _extract_primary_concept(sentence: str, keywords: list[str]) -> str:
+    sentence_clean = _clean_sentence(sentence)
+    definition_match = DEFINITION_PATTERN.match(sentence_clean)
+    if definition_match:
+        subject = definition_match.group('subject').strip(' "\'')
+        if len(subject) > 2 and subject.lower() not in PRONOUN_SUBJECTS:
+            return subject
+
+    subject = _extract_subject(sentence_clean)
+    if subject and subject.lower() not in PRONOUN_SUBJECTS:
+        return subject
+
+    if keywords:
+        return keywords[0]
+
+    words = re.findall(r'\b[A-Za-z][A-Za-z0-9\-]{2,}\b', sentence_clean)
+    return words[0] if words else 'this concept'
 
 def _extract_core_concept(sentence: str, keywords: list[str]) -> str:
     ranked_keywords = sorted(keywords, key=len, reverse=True)
@@ -171,6 +387,8 @@ def _build_definition_pair(sentence: str, keywords: list[str]) -> tuple[str, str
     subject = match.group('subject').strip(' "\'')
     definition = match.group('definition').strip()
     if len(subject) < 3 or len(definition) < 10:
+        return None
+    if subject.lower() in PRONOUN_SUBJECTS:
         return None
 
     question = f"What is {subject.strip()}?"
@@ -245,6 +463,23 @@ def _build_action_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | 
     return question, answer
 
 
+def _build_use_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
+    sentence_clean = _clean_sentence(sentence)
+    match = USE_QUESTION_PATTERN.search(sentence_clean)
+    if not match:
+        return None
+
+    subject = match.group('subject').strip(' "\'')
+    if not subject:
+        return None
+
+    question = f"What is {subject} and what does {subject} use?"
+    answer = _capitalize_answer(sentence_clean)
+    if not answer.endswith('.'):
+        answer += '.'
+    return question, answer
+
+
 def _extract_comparison_terms(sentence: str) -> tuple[str, str] | None:
     clean = _clean_sentence(sentence)
     lower = clean.lower()
@@ -291,7 +526,10 @@ def _build_comparison_pair(sentence: str, keywords: list[str]) -> tuple[str, str
 def _fallback_question(sentence: str, keywords: list[str]) -> str:
     sentence_clean = _clean_sentence(sentence)
     concept = _extract_core_concept(sentence_clean, keywords)
-    return f"What is the key concept described by {concept}?"
+    use_phrase = ''
+    if re.search(r'\b(use|uses|using|used)\b', sentence_clean, re.IGNORECASE):
+        use_phrase = ' and what does it use'
+    return f"What is the key concept described by {concept}{use_phrase}?"
 
 
 def _format_answer(answer: str) -> str:
@@ -393,21 +631,42 @@ def _generate_t5_question(sentence: str) -> str | None:
         return None
 
 
-def build_flashcard_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
+def build_flashcard_pair(sentence: str, keywords: list[str], used_templates: set[str] | None = None) -> tuple[str, str] | None:
     """Create a question/answer pair."""
+    sentence_clean = _clean_sentence(sentence)
+    concept = _extract_primary_concept(sentence_clean, keywords)
     builders = (
-        _build_comparison_pair,
-        _build_process_pair,
-        _build_action_pair,
-        _build_definition_pair,
+        (_build_use_pair, 'purpose'),
+        (_build_comparison_pair, 'comparison'),
+        (_build_process_pair, 'process'),
+        (_build_action_pair, 'function'),
+        (_build_definition_pair, 'definition'),
     )
 
-    for builder in builders:
+    for builder, theme in builders:
         pair = builder(sentence, keywords)
         if pair and _is_valid_pair(*pair):
+            if used_templates is not None:
+                context = {'concept': concept, 'term': concept, 'formula': concept, 'conceptA': concept, 'conceptB': concept}
+                for template, formatted in _template_options(theme, context, used_templates):
+                    if not formatted:
+                        continue
+                    answer = pair[1]
+                    if _is_valid_pair(formatted, answer):
+                        used_templates.add(template)
+                        return formatted, answer
             return pair
 
-    sentence_clean = _clean_sentence(sentence)
+    template_question = _choose_template(
+        _infer_question_theme(sentence_clean),
+        {'concept': concept, 'term': concept, 'formula': concept, 'conceptA': concept, 'conceptB': concept},
+        used_templates,
+    )
+    if template_question:
+        answer = _answer_from_question(template_question, sentence_clean, keywords)
+        if _is_valid_pair(template_question, answer):
+            return template_question, answer
+
     t5_question = _generate_t5_question(sentence_clean)
     question = t5_question or _fallback_question(sentence_clean, keywords)
     answer = _answer_from_question(question, sentence_clean, keywords)

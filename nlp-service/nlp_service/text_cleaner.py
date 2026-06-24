@@ -11,6 +11,10 @@ TOC_LINE_PATTERN = re.compile(r'\.{3,}|\s+\d+$')
 PAGE_NUMBER_PATTERN = re.compile(r'^(page|p)\s*\d+(?:\s*/\s*\d+)?$', re.I)
 
 
+def _remove_repeated_words(text: str) -> str:
+    return re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', text, flags=re.IGNORECASE)
+
+
 def _looks_like_heading(line: str) -> bool:
     if len(line.split()) <= 1:
         return True
@@ -27,6 +31,23 @@ def _looks_like_heading(line: str) -> bool:
     return False
 
 
+def _remove_repeated_sequences(text: str) -> str:
+    words = text.split()
+    result = []
+    i = 0
+    while i < len(words):
+        matched = False
+        for size in range(min(4, i), 0, -1):
+            if words[i - size:i] == words[i:i + size]:
+                i += size
+                matched = True
+                break
+        if not matched:
+            result.append(words[i])
+            i += 1
+    return ' '.join(result)
+
+
 def clean_text(text: str) -> str:
     """Step 1: Clean and normalize text."""
     text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
@@ -40,10 +61,12 @@ def clean_text(text: str) -> str:
         line = re.sub(r'\[\d+\]', '', line)
         line = re.sub(r'\(\s*\d{4}\s*\)', '', line)
         line = re.sub(r'\s+', ' ', line)
+        line = _remove_repeated_sequences(line)
         lines.append(line)
 
     cleaned = ' '.join(lines)
     cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = _remove_repeated_sequences(cleaned)
     return cleaned.strip()
 
 

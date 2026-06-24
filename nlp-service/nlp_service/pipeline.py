@@ -64,8 +64,9 @@ def _try_add_card(
     seen_answers: set,
     sentence: str,
     keywords: list[str],
+    used_templates: set,
 ) -> bool:
-    pair = build_flashcard_pair(sentence, keywords)
+    pair = build_flashcard_pair(sentence, keywords, used_templates)
     if not pair:
         return False
 
@@ -106,6 +107,7 @@ def generate_flashcards(text: str, max_cards: int = DEFAULT_MAX_CARDS) -> list[d
     flashcards = []
     seen_questions = set()
     seen_answers = set()
+    used_templates = set()
 
     passes = (
         {'min_score': 0.25, 'min_words': 8},
@@ -125,7 +127,7 @@ def generate_flashcards(text: str, max_cards: int = DEFAULT_MAX_CARDS) -> list[d
             if len(sentence.split()) < rules['min_words'] and len(flashcards) >= 1:
                 continue
 
-            _try_add_card(flashcards, seen_questions, seen_answers, sentence, keywords)
+            _try_add_card(flashcards, seen_questions, seen_answers, sentence, keywords, used_templates)
 
     return flashcards[:target_count]
 

@@ -73,6 +73,7 @@ function ReviewFlashcardsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [sessionStats, setSessionStats] = useState({ known: 0, notKnown: 0, total: 0 });
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   useEffect(() => {
     const fetchSet = async () => {
@@ -94,6 +95,68 @@ function ReviewFlashcardsPage() {
   }, [setId]);
 
   const currentCard = useMemo(() => queue[index] || null, [queue, index]);
+
+  function buildExplanation(card) {
+    if (!card) return { example: '', scenario: '' };
+
+    const dedupeWords = (text) => text.replace(/\b(\w+)(\s+\1\b)+/gi, '$1');
+    const normalizeText = (text) => dedupeWords(text.replace(/\s+/g, ' ').trim());
+
+    const answerText = normalizeText(card.answer || '');
+    const questionText = normalizeText(card.question || '');
+    const firstSentence = normalizeText(
+      (answerText || questionText).split(/(?<=[.!?])\s+/)[0].replace(/\.$/, ''),
+    );
+
+    let example = '';
+    let scenario = '';
+
+    const definitionMatch = firstSentence.match(/^\s*([A-Za-z0-9_\- ]+)\s+(?:is|are|means|refers to|defined as)\s+(.+)/i);
+    const processMatch = firstSentence.match(/^\s*([A-Za-z0-9_\- ]+)\s+is the process (?:by which|of|in which)\s+(.+)/i);
+    const actionMatch = firstSentence.match(/^\s*([A-Za-z0-9_\- ]+)\s+(absorbs|produces|converts|uses|stores|creates|helps|transforms|generates|processes|implements?)\s+(.+)/i);
+
+    const lowerFirstSentence = firstSentence.charAt(0).toLowerCase() + firstSentence.slice(1);
+
+    if (definitionMatch) {
+      const subject = normalizeText(definitionMatch[1]);
+      const description = normalizeText(definitionMatch[2].replace(/\.$/, ''));
+      example = `For example, ${subject} can be seen when ${description.toLowerCase()} in a classroom or workplace explanation.`;
+      scenario = `A practical scenario is applying ${subject.toLowerCase()} whenever you need to describe or identify ${description.toLowerCase()}.`;
+    } else if (processMatch) {
+      const subject = normalizeText(processMatch[1]);
+      const detail = normalizeText(processMatch[2].replace(/\.$/, ''));
+      example = `For example, ${subject} is used when ${detail.toLowerCase()} in a real procedure or experiment.`;
+      scenario = `A practical scenario is using ${subject.toLowerCase()} to complete that process correctly.`;
+    } else if (actionMatch) {
+      const subject = normalizeText(actionMatch[1]);
+      const verb = actionMatch[2].toLowerCase();
+      const object = normalizeText(actionMatch[3].replace(/\.$/, ''));
+      example = `For example, ${subject} ${verb}s ${object.toLowerCase()} while performing a real task or demonstration.`;
+      scenario = `A practical scenario is using ${subject.toLowerCase()} to ${verb} ${object.toLowerCase()} to solve an actual problem.`;
+    } else if (answerText) {
+      if (/\b(used to|used for|helps to|enables|allows|supports)\b/i.test(firstSentence)) {
+        example = `For example, ${lowerFirstSentence} during a real decision or design discussion.`;
+        scenario = `A practical scenario is choosing this concept when you need to solve a real task or meet a real requirement.`;
+      } else {
+        example = `For example, imagine ${lowerFirstSentence} being relevant in a real situation.`;
+        scenario = `A practical scenario is applying this concept to solve a practical work or study problem.`;
+      }
+    } else if (questionText) {
+      const questionPhrase = questionText.replace(/\?$/, '').trim();
+      example = `For example, picture a real situation where someone asks: ${questionPhrase}.`;
+      scenario = `A practical scenario is when this question helps you understand, explain, or use the concept in real life.`;
+    }
+
+    if (!example) {
+      example = 'For example, this concept applies in a real-world context.';
+    }
+    if (!scenario) {
+      scenario = 'A practical scenario would show how this idea is used in daily life.';
+    }
+
+    return { example: normalizeText(example), scenario: normalizeText(scenario) };
+  }
+
   const reviewedCount = sessionStats.known + sessionStats.notKnown;
   const progressPercent = sessionStats.total > 0 ? Math.round((reviewedCount / sessionStats.total) * 100) : 0;
 
@@ -109,6 +172,7 @@ function ReviewFlashcardsPage() {
       }));
       setQueue((prev) => prev.filter((_, cardIndex) => cardIndex !== index));
       setIndex(0);
+      setShowExplanation(false);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save review');
     } finally {
@@ -165,7 +229,7 @@ function ReviewFlashcardsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleReview('not_known')}
+                  onClick={() => setShowExplanation(true)}
                   disabled={submitting}
                   className="rounded-full bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-60"
                 >
@@ -175,6 +239,42 @@ function ReviewFlashcardsPage() {
             ) : null
           }
         />
+        {showExplanation ? (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            {(() => {
+              const explanation = buildExplanation(currentCard);
+              return (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Real-world example</p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{explanation.example}</p>
+                  </div>
+                  <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/70">
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Practical scenario</p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{explanation.scenario}</p>
+                  </div>
+                </>
+              );
+            })()}
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowExplanation(false)}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-200"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => handleReview('not_known')}
+                disabled={submitting}
+                className="ml-auto rounded-full bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-60"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

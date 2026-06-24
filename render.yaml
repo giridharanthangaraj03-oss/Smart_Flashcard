@@ -1,0 +1,56 @@
+services:
+  # Frontend - React + Vite SPA
+  - type: web
+    name: smart-flashcard-frontend
+    env: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: VITE_API_URL
+        value: https://smart-flashcard-backend.onrender.com/api
+      - key: NODE_ENV
+        value: production
+    plan: free
+    healthCheckPath: /
+
+  # Backend - Node.js + Express API
+  - type: web
+    name: smart-flashcard-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NLP_SERVICE_URL
+        value: https://smart-flashcard-nlp.onrender.com
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: MONGODB_URI
+        fromDatabase:
+          name: mongodb
+          property: connectionString
+    plan: free
+    healthCheckPath: /api/health
+
+  # NLP Service - FastAPI Python
+  - type: web
+    name: smart-flashcard-nlp
+    env: python-3.12
+    rootDir: nlp-service
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
+    startCommand: gunicorn -w 2 -b 0.0.0.0:8000 app:app
+    envVars:
+      - key: NLP_LIGHTWEIGHT
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    plan: free
+    healthCheckPath: /health
+
+databases:
+  - name: mongodb
+    plan: free
+    ipAllowList: []

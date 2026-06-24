@@ -5,4 +5,13 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    envVars:
+      - key: NLP_SERVICE_URL
+        value: https://smart-flashcard-nlp.onrender.com
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
     plan: free
+    healthCheckPath: /api/health
+

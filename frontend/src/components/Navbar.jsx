@@ -40,10 +40,7 @@ function Navbar() {
         { to: '/study-plan', label: t('studyPlan') },
         { to: '/profile', label: t('profile') },
       ]
-    : [
-        { to: '/login', label: t('login') },
-        { to: '/signup', label: t('signup') },
-      ];
+    : [];
 
   const closeMenu = () => {
     setIsMenuOpen(false);
@@ -143,6 +140,22 @@ function Navbar() {
             )}
           </div>
 
+          {!isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="rounded-full border border-indigo-600 bg-white px-3 py-1.5 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-500 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-slate-900"
+              >
+                {t('login')}
+              </Link>
+              <Link
+                to="/signup"
+                className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-500"
+              >
+                {t('signup')}
+              </Link>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <button
               type="button"

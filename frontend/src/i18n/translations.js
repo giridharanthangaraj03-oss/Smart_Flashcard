@@ -25,7 +25,7 @@ export const translations = {
     email: 'Email',
     password: 'Password',
     createAccountQuestion: "Don't have an account?",
-    createAccountAction: 'Create one',
+    createAccountAction: 'Create new',
     name: 'Name',
     confirmPassword: 'Confirm Password',
     createAccountSubmit: 'Create account',

@@ -4,7 +4,6 @@ import FlashcardSetList from '../components/FlashcardSetList';
 import ProgressChart from '../components/ProgressChart';
 import StatsCards from '../components/StatsCards';
 import { deleteFlashcardSet, getFlashcardSets } from '../services/flashcardService';
-import { getHealth } from '../services/statusService';
 import { exportFlashcardSetToPdf } from '../utils/exportPdf';
 import { loadLocalStudyProfile } from '../utils/studyProfileStorage';
 
@@ -24,20 +23,6 @@ function buildReviewTrend(sets) {
     .slice(-7);
 }
 
-function formatNlpMode(mode) {
-  if (!mode || typeof mode !== 'string') {
-    return 'Unknown';
-  }
-
-  const normalized = mode.trim().toLowerCase();
-  if (normalized === 'lightweight' || normalized === 'lightweigth') {
-    return 'Lightweight';
-  }
-  if (normalized === 'full') {
-    return 'Full';
-  }
-  return mode.charAt(0).toUpperCase() + mode.slice(1);
-}
 
 function DashboardPage() {
   const studyProfile = loadLocalStudyProfile();
@@ -47,8 +32,7 @@ function DashboardPage() {
   const [sort, setSort] = useState('date_desc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [health, setHealth] = useState({ database: { status: 'unknown' }, nlpService: { status: 'unknown', mode: 'unknown', models_loaded: false } });
-  const [healthError, setHealthError] = useState('');
+  
   const [deletingId, setDeletingId] = useState('');
 
   const fetchSets = useCallback(async (params = {}) => {
@@ -73,26 +57,7 @@ function DashboardPage() {
     void loadSets();
   }, [fetchSets, search, sort]);
 
-  useEffect(() => {
-    const loadHealth = async () => {
-      try {
-        const response = await getHealth();
-        setHealth(response);
-        // Only show error if there's an actual error, not just degraded status
-        setHealthError('');
-      } catch (err) {
-        // Only show error if it's a connection error, not a degraded service
-        const isConnectionError = !err.response || err.response.status === 0 || err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK';
-        const errorMessage = isConnectionError 
-          ? 'Cannot connect to backend service. Please check if the server is running.'
-          : err.response?.data?.message || err.message || 'Health check failed';
-        setHealthError(isConnectionError ? errorMessage : '');
-        setHealth({ database: { status: 'unavailable' }, nlpService: { status: 'unavailable', mode: 'unknown', models_loaded: false } });
-      }
-    };
-
-    void loadHealth();
-  }, []);
+  
 
   const handleDelete = async (id) => {
     try {
@@ -118,49 +83,7 @@ function DashboardPage() {
         </p>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-indigo-500">Service Health</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Backend and NLP status</h3>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <span className={`inline-flex items-center rounded-full px-3 py-1 font-semibold ${health.database?.status === 'connected' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'}`}>
-              DB: {health.database?.status || 'unknown'}
-            </span>
-            <span className={`inline-flex items-center rounded-full px-3 py-1 font-semibold ${health.nlpService?.status === 'healthy' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : health.nlpService?.status === 'degraded' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'}`}>
-              NLP: {health.nlpService?.status || 'unknown'}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Health check</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              {healthError ? 'Unavailable' : 'Active'}
-            </p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">NLP mode</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              {formatNlpMode(health.nlpService?.mode)}
-            </p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Models loaded</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              {health.nlpService?.models_loaded ? 'Yes' : 'No'}
-            </p>
-          </div>
-        </div>
-
-        {healthError ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-200">
-            {healthError}
-          </div>
-        ) : null}
-      </section>
+      
 
       {studyProfile ? (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">

@@ -241,6 +241,55 @@ def _fallback_question(sentence: str, keywords: list[str]) -> str:
     return f"What is the key concept described by {concept}?"
 
 
+def _format_answer(answer: str) -> str:
+    answer = _capitalize_answer(answer)
+    if not answer.endswith('.'):
+        answer += '.'
+    return answer
+
+
+def _answer_from_question(question: str, sentence: str, keywords: list[str]) -> str:
+    question_clean = _clean_sentence(question)
+    sentence_clean = _clean_sentence(sentence)
+    question_lower = question_clean.lower()
+
+    what_match = re.match(r'^what (?:is|are) (.+)\?$', question_lower)
+    if what_match:
+        subject = what_match.group(1).strip()
+        definition_match = DEFINITION_PATTERN.match(sentence_clean)
+        if definition_match:
+            return _format_answer(definition_match.group('definition').strip())
+        sentence_lower = sentence_clean.lower()
+        if subject and subject in sentence_lower:
+            if ' is ' in sentence_lower:
+                maybe_def = sentence_clean.split(' is ', 1)[1]
+                return _format_answer(maybe_def)
+        return _format_answer(sentence_clean)
+
+    how_match = re.match(r'^how does (.+) work\?$', question_lower)
+    if how_match:
+        process = how_match.group(1).strip()
+        process_match = PROCESS_PATTERN.match(sentence_clean)
+        if process_match and process.lower() in process_match.group('process').lower():
+            return _format_answer(
+                f"{process_match.group('process').strip()} works by {process_match.group('detail').strip().rstrip('.')}."
+            )
+        return _format_answer(sentence_clean)
+
+    diff_match = re.match(r'^what are the differences between (.+) and (.+)\?$', question_lower)
+    if diff_match:
+        if any(marker in sentence_clean.lower() for marker in COMPARISON_MARKERS):
+            return _format_answer(sentence_clean)
+        left = diff_match.group(1).strip().capitalize()
+        right = diff_match.group(2).strip()
+        return _format_answer(f"{left} and {right} differ in important ways based on the source material")
+
+    if question_lower.startswith('why') or question_lower.startswith('how'):
+        return _format_answer(sentence_clean)
+
+    return _format_answer(sentence_clean)
+
+
 def _is_valid_pair(question: str, answer: str) -> bool:
     if len(answer) < 10:
         return False
@@ -307,9 +356,7 @@ def build_flashcard_pair(sentence: str, keywords: list[str]) -> tuple[str, str] 
     sentence_clean = _clean_sentence(sentence)
     t5_question = _generate_t5_question(sentence_clean)
     question = t5_question or _fallback_question(sentence_clean, keywords)
-    answer = _capitalize_answer(sentence_clean)
-    if not answer.endswith('.'):
-        answer += '.'
+    answer = _answer_from_question(question, sentence_clean, keywords)
 
     if not _is_valid_pair(question, answer):
         return None
@@ -330,62 +377,3 @@ def extract_answer(sentence: str, keywords: list[str]) -> str:
     sentence_clean = _clean_sentence(sentence)
     answer = _capitalize_answer(sentence_clean)
     return answer if answer.endswith('.') else f"{answer}."
-
-
-def generate_answer_from_question(question: str, context_sentence: str = "") -> str:
-    """Analyze a question and generate an appropriate answer.
-    
-    Args:
-        question: The question to analyze (e.g., "What is photosynthesis?")
-        context_sentence: Optional original sentence for better answer extraction
-    
-    Returns:
-        A generated or inferred answer based on question analysis
-    """
-    question_clean = _clean_sentence(question)
-    question_lower = question_clean.lower()
-    
-    # Pattern: "What is X?" or "What are X?"
-    what_is_match = re.match(r'^what (?:is|are) (.+)\?$', question_lower)
-    if what_is_match:
-        subject = what_is_match.group(1).strip()
-        if context_sentence:
-            # Try to extract definition from context
-            def_match = DEFINITION_PATTERN.match(_clean_sentence(context_sentence))
-            if def_match:
-                definition = def_match.group('definition').strip()
-                return _capitalize_answer(definition) + ("." if not definition.endswith('.') else "")
-        # Generate generic answer from question
-        return f"{_capitalize_answer(subject)} is a fundamental concept that involves..."
-    
-    # Pattern: "How does X work?" or "How does X...?"
-    how_does_match = re.match(r'^how does (.+)\?$', question_lower)
-    if how_does_match:
-        process = how_does_match.group(1).strip()
-        if context_sentence:
-            proc_match = PROCESS_PATTERN.match(_clean_sentence(context_sentence))
-            if proc_match:
-                detail = proc_match.group('detail').strip()
-                answer = f"{_capitalize_answer(process)} works by {detail.rstrip('.')}."
-                return answer
-        # Generate generic answer from question
-        return f"{_capitalize_answer(process)} works through a systematic process that..."
-    
-    # Pattern: "What are the differences between X and Y?"
-    diff_match = re.match(r'^what are the differences between (.+) and (.+)\?$', question_lower)
-    if diff_match:
-        left = diff_match.group(1).strip()
-        right = diff_match.group(2).strip()
-        if context_sentence:
-            sentence_clean = _clean_sentence(context_sentence)
-            if any(marker in sentence_clean.lower() for marker in COMPARISON_MARKERS):
-                return _capitalize_answer(sentence_clean) + ("." if not sentence_clean.endswith('.') else "")
-        # Generate generic comparison answer
-        return f"{_capitalize_answer(left)} and {right} differ in key aspects including their characteristics, functions, and applications."
-    
-    # Fallback: return context sentence if available, otherwise generate placeholder
-    if context_sentence:
-        sentence_clean = _clean_sentence(context_sentence)
-        return _capitalize_answer(sentence_clean) + ("." if not sentence_clean.endswith('.') else "")
-    
-    return "This concept involves a detailed explanation and understanding of the key principles involved."

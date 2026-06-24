@@ -291,39 +291,12 @@ def _generate_t5_question(sentence: str) -> str | None:
         return None
 
 
-def _is_valid_pair(question: str, answer: str) -> bool:
-    if len(question) < 20 or len(answer) < 10:
-        return False
-
-    if not _is_deep_question(question):
-        return False
-
-    if _normalize(question) == _normalize(answer):
-        return False
-
-    question_words = set(re.findall(r'\b[a-z]{3,}\b', _normalize(question)))
-    answer_words = set(re.findall(r'\b[a-z]{3,}\b', _normalize(answer)))
-    if question_words and answer_words:
-        overlap = len(question_words & answer_words) / max(len(question_words), 1)
-        if overlap > 0.85 and len(answer_words) <= len(question_words) + 2:
-            return False
-
-    return True
-
-
 def build_flashcard_pair(sentence: str, keywords: list[str]) -> tuple[str, str] | None:
-    """Create a deep conceptual question/answer pair."""
+    """Create a question/answer pair."""
     builders = (
-        _build_causal_pair,
         _build_comparison_pair,
-        _build_mechanism_pair,
-        _build_application_pair,
         _build_process_pair,
         _build_definition_pair,
-        _build_passive_pair,
-        _build_action_pair,
-        _build_synthesis_pair,
-        _build_keyword_pair,
     )
 
     for builder in builders:

@@ -78,9 +78,15 @@ function DashboardPage() {
       try {
         const response = await getHealth();
         setHealth(response);
+        // Only show error if there's an actual error, not just degraded status
         setHealthError('');
       } catch (err) {
-        setHealthError(err.response?.data?.message || err.message || 'Health check failed');
+        // Only show error if it's a connection error, not a degraded service
+        const isConnectionError = !err.response || err.response.status === 0 || err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK';
+        const errorMessage = isConnectionError 
+          ? 'Cannot connect to backend service. Please check if the server is running.'
+          : err.response?.data?.message || err.message || 'Health check failed';
+        setHealthError(isConnectionError ? errorMessage : '');
         setHealth({ database: { status: 'unavailable' }, nlpService: { status: 'unavailable', mode: 'unknown', models_loaded: false } });
       }
     };
